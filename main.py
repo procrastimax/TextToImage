@@ -59,7 +59,7 @@ def generate_image_from_text(
     draw = ImageDraw.Draw(img)
 
     offset: float = margin / 2
-    for line in textwrap.wrap(text, width=text_width):
+    for line in line_list:
         draw.text((margin / 2, offset), line, font=img_font, fill=col_fg)
         offset += img_font.getsize(line)[1]
 
