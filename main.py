@@ -74,7 +74,7 @@ if __name__ == "__main__":
         "-i",
         "--input-file",
         type=str,
-        help="Filename from which the text shall be read.",
+        help="Filename from which the text shall be read. If no filename is specified, the text is read from STDIN.",
         default="",
     )
     parser.add_argument(
