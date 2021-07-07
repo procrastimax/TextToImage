@@ -29,6 +29,8 @@ def generate_image_from_text(
     text_width: int = 50,
     font_size: int = 11,
     font: str = "./fonts/DejaVuSans.ttf",
+    col_bg: str = "#ffffff",
+    col_fg: str = "#000000",
     margin: int = 6,
 ):
 
@@ -49,9 +51,6 @@ def generate_image_from_text(
             max_width = img_width
         if img_height > max_height:
             max_height = img_height
-
-    col_fg = "black"
-    col_bg = "white"
 
     img = Image.new(
         "RGB", (max_width + margin, (len(line_list) * max_height) + margin), col_bg
@@ -112,6 +111,20 @@ if __name__ == "__main__":
         help="Sets the character width per line. Aka. how many characters shall be displayed for each line.",
         default=50,
     )
+    parser.add_argument(
+        "-fg",
+        "--foreground-color",
+        type=str,
+        help="Sets the foreground (text) color of the generated image. (Default: black)",
+        default="#000000",
+    )
+    parser.add_argument(
+        "-bg",
+        "--background-color",
+        type=str,
+        help="Sets the background color of the generated image. (Default: white)",
+        default="#ffffff",
+    )
     args = parser.parse_args()
 
     img_text: str = ""
@@ -131,4 +144,6 @@ if __name__ == "__main__":
         font=args.font_path,
         font_size=args.font_size,
         margin=args.margin,
+        col_bg=args.background_color,
+        col_fg=args.foreground_color,
     )
