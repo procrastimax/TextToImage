@@ -8,7 +8,7 @@ import argparse
 import sys
 import textwrap
 import re
-from typing import Dict
+from typing import Dict, List
 
 clean_word_re = re.compile("[^a-zA-Z]")
 
@@ -36,7 +36,7 @@ def generate_image_from_text(
     col_bg: str = "#ffffff",
     col_fg: str = "#000000",
     margin: int = 6,
-    highlighted_words: Dict[str, str] = {},
+    highlighted_words: Dict[str, List[str]] = {},
 ):
 
     img_font = ImageFont.truetype(font, font_size)
@@ -73,19 +73,99 @@ def generate_image_from_text(
     else:
         # if we want to highlight words, we need to draw the text word by word and not line by line
         h_words = list(highlighted_words.keys())
+
+        used_colors_list = []
+
         for line in line_list:
             word_list = line.split()  # hopefully this works
             text_margin = margin / 2
-            for word in word_list:
-                # clean word to remove punctuations
-                clean_word = clean_word_re.sub("", word)
 
+            for i, word in enumerate(word_list):
+                clean_word = word
+
+                # clear out apostrophe s, this is probably the most common vocabular change
+                if clean_word.strip().endswith("'s"):
+                    clean_word = clean_word[:-2]
+
+                if clean_word.strip().endswith("'"):
+                    clean_word = clean_word[:-1]
+
+                # clean word to remove punctuations
+                clean_word = clean_word_re.sub("", clean_word)
+
+                # dirty hack to include apostrophe s
                 if clean_word in h_words:
+
+                    # now its getting nasty here (my bad!)
+                    # we have to find the color of words which have multiple colors (because of the same word in different word groups)
+                    # to do this, we have to check the previous and the next word, get the color of these words and look up if they match with the colors saved for the current word
+                    # however, this case only occurs if there are multiple colors for one word
+                    highlight_color = highlight_words[clean_word][0]
+
+                    if len(highlighted_words[clean_word]) > 1:
+                        # if the first defined color for a word already occured, try to take the next one
+                        tmp_it = 1
+                        while highlight_color in used_colors_list:
+                            highlight_color = highlight_words[clean_word][tmp_it]
+
+                            if tmp_it < len(highlighted_words[clean_word]) - 1:
+                                tmp_it += 1
+                            else:
+                                break
+                        used_colors_list.append(highlight_color)
+
+                        found_color = False
+
+                        # check boundaries
+                        prev_word = ""
+                        if i != 0:
+                            prev_word = word_list[i - 1]
+                            prev_word = clean_word_re.sub("", prev_word)
+
+                        next_word = ""
+                        if i < len(word_list) - 1:
+                            next_word = word_list[i + 1]
+                            next_word = clean_word_re.sub("", next_word)
+
+                        next_color = []
+                        # check if either previous or next word is in our word list
+                        if next_word in h_words:
+                            next_color = highlighted_words[next_word]
+
+                        prev_color = []
+                        if prev_word in h_words:
+                            prev_color = highlighted_words[prev_word]
+
+                        # if both lists (prev_, next_) are empty, there is no highlighted word for the word and we stick to the first color
+                        if len(prev_color) == 0 and len(next_color) == 0:
+                            found_color = True
+
+                        # there could be the case that both the next and the previous word are defined with multiple colors
+                        # we just have to hope that this is not the case and use the one with only one defined color - starting with the next word
+
+                        if not found_color and len(next_color) == 1:
+                            tmp_color = next_color[0]
+                            # check if the color is in our list of colors for the word
+                            if tmp_color in highlight_words[clean_word]:
+                                highlight_color = tmp_color
+                                found_color = True
+
+                        if not found_color and len(prev_color) == 1:
+                            tmp_color = prev_color[0]
+                            # check if the color is in our list of colors for the word
+                            if tmp_color in highlight_words[clean_word]:
+                                highlight_color = tmp_color
+                                found_color = True
+
+                        if not found_color:
+                            # if we still did not found our color, print something
+                            print("not found color for word: " + clean_word)
+
                     draw.text(
                         (text_margin, offset),
                         word,
                         font=img_font_bold,
-                        fill=highlight_words[clean_word],
+                        fill=highlight_color,
                     )
                     text_margin += img_font_bold.getsize(word + " ")[0]
                 else:
@@ -168,10 +248,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-hw",
         "--highlight-words",
+        help="A string of words that shall be highlighted with the given color. Example: '-hw word1-#123456 word2-#654321 ...'",
         type=str,
-        help="A string list of words that shall be highlighted with the given color. Example: '-hw word1-#123456 word2-#654321 ...'",
-        nargs="+",
-        default=[],
+        default="",
     )
 
     args = parser.parse_args()
@@ -186,8 +265,8 @@ if __name__ == "__main__":
     img_text = img_text.replace("  ", " ")
     img_text = img_text.strip()
 
-    highlight_list = args.highlight_words
-    highlight_words: Dict[str, str] = {}
+    highlight_list = args.highlight_words.split()
+    highlight_words: Dict[str, List[str]] = {}
     # create dict from passed words and colors
     for entry in highlight_list:
         tmp_split = []
@@ -209,7 +288,11 @@ if __name__ == "__main__":
                     f"{tmp_split[1]} is not a propery hex color to highlight {tmp_split[0]}"
                 )
                 continue
-            highlight_words[tmp_split[0]] = tmp_split[1]
+
+            if not tmp_split[0] in highlight_words:
+                highlight_words[tmp_split[0]] = [tmp_split[1]]
+            else:
+                highlight_words[tmp_split[0]].append(tmp_split[1])
 
     margin = args.margin
     generate_image_from_text(
