@@ -12,28 +12,6 @@ from typing import Dict
 
 clean_word_re = re.compile("[^a-zA-Z]")
 
-# this is a tuple of colors used to highlight special words that could occur in the text
-# for our purposes we do not expect more than 17 highlights in a text, thats why this tuple has only 17 hardcoded colors
-highlight_colors = (
-    "#e53635",
-    "#d81b60",
-    "#8e24aa",
-    "#5e35b1",
-    "#3949ab",
-    "#1e88e5",
-    "#039be5",
-    "#00acc1",
-    "#00897b",
-    "#43a047",
-    "#7cb342",
-    "#c0ca33",
-    "#fdd835",
-    "#ffb300",
-    "#fb8c00",
-    "#f4511e",
-    "#6d4c41",
-)
-
 
 def parse_from_stdin() -> str:
     text: str = ""
